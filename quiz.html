@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧩 매일매일 두뇌 트레이닝 퀴즈</title>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f0f2f5; text-align: center; padding: 20px; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1 { color: #4a90e2; }
+        .calendar-box { background: #eef5fc; padding: 15px; border-radius: 10px; font-weight: bold; margin-bottom: 20px; font-size: 1.2rem; }
+        .quiz-box { font-size: 1.3rem; margin: 20px 0; font-weight: bold; background: #fffde7; padding: 20px; border-radius: 10px; border: 2px dashed #ffd54f; }
+        input[type="text"] { width: 80%; padding: 10px; font-size: 1.1rem; border: 2px solid #ddd; border-radius: 5px; margin-bottom: 10px; }
+        button { background: #4a90e2; color: white; border: none; padding: 10px 20px; font-size: 1rem; border-radius: 5px; cursor: pointer; transition: 0.2s; margin: 5px; }
+        button:hover { background: #357abd; }
+        .hint-btn-mom { background: #ff8a80; }
+        .hint-btn-mom:hover { background: #e57373; }
+        .hint-btn-me { background: #b2dfdb; color: #004d40; }
+        .hint-btn-me:hover { background: #80cbc4; }
+        .hint-text { background: #f5f5f5; padding: 10px; border-radius: 5px; margin: 10px 0; display: none; font-size: 0.95rem; }
+        .result-box { display: none; margin-top: 20px; padding: 20px; background: #e8f5e9; border-radius: 10px; border: 2px solid #81c784; }
+        .score { font-size: 1.5rem; color: #2e7d32; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🧩 매일매일 두뇌 퀴즈</h1>
+    
+    <div class="calendar-box" id="today-date">📅 날짜 로딩 중...</div>
+    
+    <div class="quiz-box" id="quiz-question">문제를 불러오는 중입니다...</div>
+    
+    <input type="text" id="user-answer" placeholder="정답을 입력하세요!">
+    <br>
+    <button onclick="checkAnswer()">정답 제출하기 🚀</button>
+    
+    <hr style="margin: 25px 0; border: 0; border-top: 1px solid #eee;">
+    
+    <h3>💡 정답이 안 보일 땐? 힌트 찬스!</h3>
+    <button class="hint-btn-mom" onclick="toggleHint('mom')">👩‍🍳 엄마의 구수한 힌트</button>
+    <button class="hint-btn-me" onclick="toggleHint('me')">⚡ 나의 트렌디한 힌트</button>
+    
+    <div id="hint-mom" class="hint-text"></div>
+    <div id="hint-me" class="hint-text"></div>
+    
+    <div id="result-area" class="result-box">
+        <p class="score" id="result-message"></p>
+        <p>🎉 오늘 출석 체크 완료! 내일 새로운 문제로 또 만나요!</p>
+        <button onclick="shareResult()" style="background: #fbc02d; color: black;">카카오톡/SNS로 결과 공유하기 🔗</button>
+    </div>
+</div>
+
+<script>
+    // 💡 엄마와 매일 바꿀 퀴즈 데이터 은행! (여기만 고치면 매일 문제가 바뀝니다)
+    const quizDatabase = {
+        // 일요일 (0) ~ 토요일 (6) 기준 일주일치 퀴즈
+        0: { q: "[엄마표 사자성어] 눈에 불을 켜고 찾아본다는 뜻으로, 몹시 분해서 눈을 부릅뜨고 노려보는 것은? (힌트: 🪔👀)", a: "괄목상대", hintMom: "삼국지에 나오는 말인데, 눈을 비비고 상대방을 본다는 뜻이란다!", hintMe: "완전 몰라보게 발전한 친구 볼 때 쓰는 말! 네 글자야." },
+        1: { q: "[넌센스] 세상에서 가장 장사를 잘하는 동물은?", a: "장어", hintMom: "시장에서 장사(상업)를 아주 잘하는 물고기란다.", hintMe: "이름에 '장사'할 때 '장'이 들어가!" },
+        2: { q: "[초성 퀴즈] 2020년대를 뒤흔든 최고의 애니메이션 영화 제목은? \n 초성: ㅇㄹㅇㄴ", a: "엘리멘탈", hintMom: "불과 물이 나오는 아주 감동적인 만화 영화였지.", hintMe: "디즈니 픽사 작품! '디즈니 ㅇㄹㅇㄴ'" },
+        3: { q: "[논리 퍼즐] '이것'은 많을수록 무게가 가벼워집니다. 청바지나 치즈에 이것이 많으면 숭숭 뚫려 보이죠. 이것은?", a: "구멍", hintMom: "바지가 찢어지면 이곳이 생기지~", hintMe: "도넛 한가운데에 있는 것!" },
+        4: { q: "[트렌드 퀴즈] 맛있는 음식을 먹었을 때 요새 10대들이 '진짜 맛있다'라는 표현을 세 글자로 줄여서 뭐라고 할까요? (초성: 존ㅁㅌ)", a: "존맛탱", hintMom: "엄마는 쓰기 조금 부끄러운 젊은이들 말이네 ㅎㅎ", hintMe: "JMT을 한글로 그대로 읽으면 돼!" },
+        5: { q: "[속담 빈칸] '오르지 못할 나무는 (     )도 보지 마라'", a: "쳐다보지", hintMom: "애초에 가질 수 없는 거라면 마음도 주지 말라는 뜻이야.", hintMe: "눈으로 위를 향해 바라보는 행동!" },
+        6: { q: "[아재개그] 왕이 궁궐에 가기 싫을 때 하는 말은?", a: "궁시렁", hintMom: "왕이 사는 곳은 '궁'이고, 투덜대는 소리를 합쳐봐.", hintMe: "투덜투덜 불만을 말할 때 쓰는 세 글자 의성어야!" }
+    };
+
+    // 오늘 날짜 정보 가져오기
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0: 일요일, 1: 월요일 ... 6: 토요일
+    const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+    
+    // 화면에 오늘 날짜 띄우기
+    document.getElementById('today-date').innerText = "📅 " + today.toLocaleDateString('ko-KR', options);
+    
+    // 오늘 날짜에 맞는 문제 가져오기
+    const currentQuiz = quizDatabase[dayOfWeek];
+    document.getElementById('quiz-question').innerText = currentQuiz.q;
+    document.getElementById('hint-mom').innerText = "👵 엄마의 힌트: " + currentQuiz.hintMom;
+    document.getElementById('hint-me').innerText = "⚡ 나의 힌트: " + currentQuiz.hintMe;
+
+    // 힌트 보여주기/숨기기 토글 함수
+    function toggleHint(type) {
+        const hintDiv = document.getElementById('hint-' + type);
+        if (hintDiv.style.display === 'none' || hintDiv.style.display === '') {
+            hintDiv.style.display = 'block';
+        } else {
+            hintDiv.style.display = 'none';
+        }
+    }
+
+    // 정답 체크 함수
+    function checkAnswer() {
+        const userAnswer = document.getElementById('user-answer').value.trim().replace(/\s+/g, ''); // 공백 제거
+        const correctAnswer = currentQuiz.a.replace(/\s+/g, '');
+        
+        const resultArea = document.getElementById('result-area');
+        const resultMessage = document.getElementById('result-message');
+        
+        if (userAnswer === correctAnswer) {
+            // 정답일 때 (두뇌 나이 랜덤으로 재치 있게 출력)
+            const brainAges = [15, 18, 20, 23, 25];
+            const randomAge = brainAges[Math.floor(Math.random() * brainAges.length)];
+            
+            resultMessage.innerHTML = "🎉 정답입니다! <br> 🧠 오늘의 두뇌 나이 결과: [" + randomAge + "세]";
+            resultArea.style.display = "block";
+            resultArea.style.backgroundColor = "#e8f5e9"; // 초록빛
+            resultArea.style.borderColor = "#81c784";
+        } else {
+            // 오답일 때
+            resultMessage.innerHTML = "❌ 아쉽게도 오답이에요! <br> 힌트를 다시 한번 읽고 도전해 보세요!";
+            resultArea.style.display = "block";
+            resultArea.style.backgroundColor = "#ffebee"; // 빨간빛
+            resultArea.style.borderColor = "#ef9a9a";
+        }
+    }
+
+    // 공유 기능 예시 알림
+    function shareResult() {
+        alert("🔗 주소가 복사되었습니다! 친구나 가족 단톡방에 붙여넣어(Ctrl+V) 자랑해 보세요!");
+    }
+</script>
+
+</body>
+</html>
